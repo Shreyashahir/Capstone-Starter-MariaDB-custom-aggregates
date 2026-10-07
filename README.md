@@ -13,9 +13,53 @@ This repo builds two aggregates and uses them on the [openflights](https://githu
 
 Each one is shown next to the query you would write without it.
 
-## Status
+## Findings so far
 
-Work in progress. Findings and measurements come later.
+Data: 3,211 airports with at least one departing route. World mean is 20.9 routes per airport, median is 4, max is 915.
+
+- Most airports are small. 1,883 of 3,211 (59%) have 5 routes or fewer, while 162 hubs have more than 100.
+- Because of that, the mean is misleading. In the US the mean is 23.8 routes per airport but the median is 3. A few hubs pull the mean up.
+- That is why a median aggregate is worth having: it gives the typical airport, not the hub-inflated average.
+- Next: `gini(x)` will put a number on how concentrated each country's routes are.
+
+Timings (with vs without the custom aggregate) come later.
+
+### Chart 1: Median routes per airport, top 15 countries
+
+```mermaid
+xychart-beta
+    title "Median routes per served airport"
+    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
+    y-axis "Routes" 0 --> 12
+    bar [3, 3, 10, 3, 2, 5, 7, 4, 5, 7, 7, 9.5, 4, 2, 3]
+```
+
+Countries are the 15 with the most served airports, from left to right.
+
+### Chart 2: Mean (bars) vs median (line)
+
+```mermaid
+xychart-beta
+    title "Mean vs median routes per served airport"
+    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
+    y-axis "Routes" 0 --> 55
+    bar [23.8, 9.0, 47.5, 11.7, 9.8, 17.8, 20.5, 13.2, 20.7, 18.9, 35.1, 51.2, 13.2, 7.4, 22.7]
+    line [3, 3, 10, 3, 2, 5, 7, 4, 5, 7, 7, 9.5, 4, 2, 3]
+```
+
+The gap between the bar and the line shows how much a few big hubs distort the mean.
+
+### Chart 3: How many routes airports have (whole world)
+
+```mermaid
+xychart-beta
+    title "Airports by number of departing routes"
+    x-axis "Routes per airport" ["1", "2", "3-5", "6-10", "11-20", "21-50", "51-100", "101+"]
+    y-axis "Airports" 0 --> 800
+    bar [596, 542, 745, 433, 308, 277, 148, 162]
+```
+
+All chart numbers come from [queries/chart_data.sql](queries/chart_data.sql) on MariaDB 12.3.3. Charts are Mermaid, so GitHub draws them from the text above.
 
 ## Requirements
 
@@ -62,7 +106,7 @@ Airports with no routes are left out. Most of them are small airfields, and incl
 |---|---|---|
 | Median routes per airport, per country | [queries/median_before.sql](queries/median_before.sql) | [queries/median_after.sql](queries/median_after.sql) |
 
-[queries/median_check.sql](queries/median_check.sql) checks that both give the same numbers.
+[queries/median_check.sql](queries/median_check.sql) checks that both give the same numbers (0 rows = they agree for every country).
 
 ## How it was made
 
