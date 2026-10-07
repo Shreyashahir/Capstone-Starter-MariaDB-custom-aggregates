@@ -1,0 +1,9 @@
+# AI-use log
+
+One line per AI use: the tool, the part it touched, the prompt, and what it produced.
+Prompts are saved in `prompts/`. When the code changes, update this log so it still matches.
+
+| # | Date | Tool | Part it touched | Prompt | What it produced | What I did with it |
+|---|---|---|---|---|---|---|
+| 1 | 2026-10-07 | Claude (Anthropic) | Starter choice and plan (no code) | [prompts/001-starter-choice.md](prompts/001-starter-choice.md) | Summary of the course files and project areas, 3 starter options, step plan (`Starter plan.md`, kept outside the repo) | Picked option A |
+| 2 | 2026-10-07 | Claude (Anthropic) | `sql/01_served_airports.sql`, `sql/02_median_agg.sql`, `queries/median_*.sql`, `README.md` | [prompts/002-median-first-piece.md](prompts/002-median-first-piece.md) | View, `median_agg` function, before/after/check queries, README draft. Tested on MariaDB 12.3.3: same result as built-in MEDIAN() for every country | Reviewing |
