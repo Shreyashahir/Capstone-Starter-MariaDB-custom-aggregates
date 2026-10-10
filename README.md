@@ -9,7 +9,7 @@ This repo builds two aggregates and uses them on the [openflights](https://githu
 | Function | Status | Question it answers |
 |---|---|---|
 | `median_agg(x)` | working | What is the typical number of routes per airport in a country? |
-| `gini(x)` | planned | How concentrated are a country's routes in a few airports? |
+| `gini(x)` | working | How concentrated are a country's routes in a few airports? |
 
 Each one is shown next to the query you would write without it.
 
@@ -20,7 +20,7 @@ Data: 3,211 airports with at least one departing route. World mean is 20.9 route
 - Most airports are small. 1,883 of 3,211 (59%) have 5 routes or fewer, while 162 hubs have more than 100.
 - Because of that, the mean is misleading. In the US the mean is 23.8 routes per airport but the median is 3. A few hubs pull the mean up.
 - That is why a median aggregate is worth having: it gives the typical airport, not the hub-inflated average.
-- Next: `gini(x)` will put a number on how concentrated each country's routes are.
+- `gini(x)` puts a number on that concentration (0 = all airports equal, close to 1 = one hub has almost everything). World value: 0.776. Among the 15 biggest countries the US is the most concentrated (0.815) and Indonesia the least (0.675).
 
 Timings (with vs without the custom aggregate) come later.
 
@@ -57,6 +57,16 @@ xychart-beta
     x-axis "Routes per airport" ["1", "2", "3-5", "6-10", "11-20", "21-50", "51-100", "101+"]
     y-axis "Airports" 0 --> 800
     bar [596, 542, 745, 433, 308, 277, 148, 162]
+```
+
+### Chart 4: Gini of routes per airport, top 15 countries
+
+```mermaid
+xychart-beta
+    title "Gini coefficient of routes per served airport"
+    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
+    y-axis "Gini" 0 --> 1
+    bar [0.815, 0.703, 0.717, 0.704, 0.755, 0.733, 0.715, 0.675, 0.750, 0.688, 0.754, 0.744, 0.687, 0.700, 0.802]
 ```
 
 All chart numbers come from [queries/chart_data.sql](queries/chart_data.sql) on MariaDB 12.3.3. Charts are Mermaid, so GitHub draws them from the text above.
@@ -106,7 +116,13 @@ Airports with no routes are left out. Most of them are small airfields, and incl
 |---|---|---|
 | Median routes per airport, per country | [queries/median_before.sql](queries/median_before.sql) | [queries/median_after.sql](queries/median_after.sql) |
 
-[queries/median_check.sql](queries/median_check.sql) checks that both give the same numbers (0 rows = they agree for every country).
+| Gini of routes per airport, per country | [queries/gini_before.sql](queries/gini_before.sql) | [queries/gini_after.sql](queries/gini_after.sql) |
+
+[queries/median_check.sql](queries/median_check.sql) and [queries/gini_check.sql](queries/gini_check.sql) check that both versions give the same numbers (0 rows = they agree for every country).
+
+### A trap found on the way
+
+The first hand-written Gini query and the first `gini` function both returned slightly wrong numbers (e.g. `0.000000000333` instead of `0` for three equal values). The cause: in MariaDB, `INT / INT` is computed as DECIMAL and kept to `div_precision_increment` decimals (default 4). So `(n + 1) / n` became `1.3333`. Both versions now cast to DOUBLE. The custom function hides this fix in one place; every hand-written copy of the formula has to remember it.
 
 ## How it was made
 
