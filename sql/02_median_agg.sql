@@ -5,14 +5,20 @@
 -- Named median_agg because MariaDB already has a built-in MEDIAN() window function.
 --
 -- How it works: FETCH GROUP NEXT ROW walks the rows of the group. Each value is
--- appended to a JSON array. When the group ends (NOT FOUND), the array is turned
--- back into rows with JSON_TABLE, sorted, and the middle row(s) are picked.
+-- added to a comma-separated text list. When the group ends (NOT FOUND), the list
+-- is read once as a JSON array with JSON_TABLE, sorted, and the middle row(s) are
+-- picked.
+--
+-- Why a text list and not JSON_ARRAY_APPEND: the first version appended to a JSON
+-- array. That parses and copies the whole array on every row, so a group of
+-- 10,000 rows took about 10 s. The text list takes under 1 s for the same group
+-- (see experiments/05_faster_median.sql and results/04_scale.txt).
 
 DELIMITER //
 
 CREATE OR REPLACE AGGREGATE FUNCTION median_agg(x DOUBLE) RETURNS DOUBLE
 BEGIN
-  DECLARE vals JSON DEFAULT '[]';
+  DECLARE vals LONGTEXT DEFAULT '';
   DECLARE n INT DEFAULT 0;
   DECLARE result DOUBLE DEFAULT NULL;
   DECLARE take INT;
@@ -27,7 +33,7 @@ BEGIN
       SELECT AVG(v) INTO result
       FROM (
         SELECT jt.v
-        FROM JSON_TABLE(vals, '$[*]' COLUMNS (v DOUBLE PATH '$')) AS jt
+        FROM JSON_TABLE(CONCAT('[', vals, ']'), '$[*]' COLUMNS (v DOUBLE PATH '$')) AS jt
         ORDER BY jt.v
         LIMIT take OFFSET skip
       ) AS middle;
@@ -38,7 +44,7 @@ BEGIN
   LOOP
     FETCH GROUP NEXT ROW;
     IF x IS NOT NULL THEN
-      SET vals = JSON_ARRAY_APPEND(vals, '$', x);
+      SET vals = IF(n = 0, CAST(x AS CHAR), CONCAT(vals, ',', x));
       SET n = n + 1;
     END IF;
   END LOOP;

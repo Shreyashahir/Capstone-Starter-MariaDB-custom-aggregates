@@ -8,14 +8,15 @@
 --   G = 2 * SUM(i * x_i) / (n * SUM(x)) - (n + 1) / n
 --
 -- How it works: same pattern as median_agg. FETCH GROUP NEXT ROW collects the
--- group into a JSON array and keeps a running total. At the end of the group the
--- array is sorted with JSON_TABLE + ROW_NUMBER() and the formula is applied.
+-- group into a comma-separated text list and keeps a running total. At the end
+-- of the group the list is read with JSON_TABLE, sorted with ROW_NUMBER(), and
+-- the formula is applied.
 
 DELIMITER //
 
 CREATE OR REPLACE AGGREGATE FUNCTION gini(x DOUBLE) RETURNS DOUBLE
 BEGIN
-  DECLARE vals JSON DEFAULT '[]';
+  DECLARE vals LONGTEXT DEFAULT '';
   DECLARE n INT DEFAULT 0;
   DECLARE total DOUBLE DEFAULT 0;
   DECLARE result DOUBLE DEFAULT NULL;
@@ -28,7 +29,7 @@ BEGIN
       SELECT 2 * SUM(s.rn * s.v) / (n * total) - (n + 1) / CAST(n AS DOUBLE) INTO result
       FROM (
         SELECT jt.v, ROW_NUMBER() OVER (ORDER BY jt.v) AS rn
-        FROM JSON_TABLE(vals, '$[*]' COLUMNS (v DOUBLE PATH '$')) AS jt
+        FROM JSON_TABLE(CONCAT('[', vals, ']'), '$[*]' COLUMNS (v DOUBLE PATH '$')) AS jt
       ) AS s;
     END IF;
     RETURN result;
@@ -37,7 +38,7 @@ BEGIN
   LOOP
     FETCH GROUP NEXT ROW;
     IF x IS NOT NULL THEN
-      SET vals = JSON_ARRAY_APPEND(vals, '$', x);
+      SET vals = IF(n = 0, CAST(x AS CHAR), CONCAT(vals, ',', x));
       SET n = n + 1;
       SET total = total + x;
     END IF;
