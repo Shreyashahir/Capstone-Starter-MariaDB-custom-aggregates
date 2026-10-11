@@ -1,50 +1,39 @@
 -- median_agg(x): the middle value of x in each group.
--- With an even number of rows it returns the mean of the two middle values.
--- NULLs are ignored. Returns NULL for an empty group.
+--   Even number of values: the mean of the two middle values.
+--   NULLs are skipped. An empty group returns NULL.
+-- Named median_agg because MEDIAN() already exists as a window function.
 --
--- Named median_agg because MariaDB already has a built-in MEDIAN() window function.
---
--- How it works: FETCH GROUP NEXT ROW walks the rows of the group. Each value is
--- added to a comma-separated text list. When the group ends (NOT FOUND), the list
--- is read once as a JSON array with JSON_TABLE, sorted, and the middle row(s) are
--- picked.
---
--- Why a text list and not JSON_ARRAY_APPEND: the first version appended to a JSON
--- array. That parses and copies the whole array on every row, so a group of
--- 10,000 rows took about 10 s. The text list takes under 1 s for the same group
--- (see experiments/05_faster_median.sql and results/04_scale.txt).
+-- The values are kept in a text list ('28,1,18') and read once at the end.
+-- An earlier version used JSON_ARRAY_APPEND per row and was about 17x slower
+-- at 10,000 rows (experiments/05_faster_median.sql).
 
 DELIMITER //
 
 CREATE OR REPLACE AGGREGATE FUNCTION median_agg(x DOUBLE) RETURNS DOUBLE
 BEGIN
-  DECLARE vals LONGTEXT DEFAULT '';
-  DECLARE n INT DEFAULT 0;
-  DECLARE result DOUBLE DEFAULT NULL;
-  DECLARE take INT;
-  DECLARE skip INT;
+  DECLARE vals LONGTEXT DEFAULT '';  -- the group's values, comma-separated
+  DECLARE n INT DEFAULT 0;           -- how many values so far
 
+  -- Runs once, when the group has no more rows.
   DECLARE CONTINUE HANDLER FOR NOT FOUND
   BEGIN
-    IF n > 0 THEN
-      -- odd n: take 1 row; even n: take the 2 middle rows
-      SET take = 2 - n % 2;
-      SET skip = (n - 1) DIV 2;
-      SELECT AVG(v) INTO result
-      FROM (
+    DECLARE take INT DEFAULT 2 - n % 2;      -- odd n: 1 middle value, even n: 2
+    DECLARE skip INT DEFAULT (n - 1) DIV 2;  -- values below the middle
+    RETURN (
+      SELECT AVG(v) FROM (
         SELECT jt.v
         FROM JSON_TABLE(CONCAT('[', vals, ']'), '$[*]' COLUMNS (v DOUBLE PATH '$')) AS jt
         ORDER BY jt.v
         LIMIT take OFFSET skip
-      ) AS middle;
-    END IF;
-    RETURN result;
+      ) AS middle
+    );
   END;
 
+  -- Runs once per row.
   LOOP
     FETCH GROUP NEXT ROW;
     IF x IS NOT NULL THEN
-      SET vals = IF(n = 0, CAST(x AS CHAR), CONCAT(vals, ',', x));
+      SET vals = CONCAT(vals, IF(n = 0, '', ','), x);
       SET n = n + 1;
     END IF;
   END LOOP;
