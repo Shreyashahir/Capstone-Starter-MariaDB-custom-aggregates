@@ -20,7 +20,7 @@ Open an issue with:
 Open an issue that says what you want to compute and show a query you would like to write.
 
 ## Set up and run the tests
-Follow [Setup](README.md#setup) in the README, then:
+Follow [Quick start](README.md#quick-start) in the README, then:
 
 ```sh
 ./install.sh
