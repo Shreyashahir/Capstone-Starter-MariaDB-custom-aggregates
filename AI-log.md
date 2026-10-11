@@ -10,6 +10,7 @@ When the code changes, this log is updated so it still matches. New entries go a
 - I set up the database on my Mac with Colima, because my Mac no longer supports Docker Desktop.
 - I decided what to work on at each step, based on the supervisor's feedback and the MariaDB evaluation criteria.
 - I approved each new piece before it was added: Gini, the depth experiments, `mode_agg` and the MIT license.
+- I chose opensource.guide as the standard for how the repo is organized.
 - Every change goes through a branch and a pull request, which I merge on GitHub.
 - I prepared the meeting presentation with the material from entry 7.
 
@@ -18,6 +19,7 @@ When the code changes, this log is updated so it still matches. New entries go a
 - Wrote first versions of the SQL functions, queries, tests, scripts and README text.
 - Ran the experiments and timings on my local database and saved the results in `results/`.
 - Searched MariaDB JIRA for the known bugs behind each limit.
+- Cleaned up the code and added the open source files (entry 9).
 
 ## Summary
 
@@ -31,6 +33,7 @@ When the code changes, this log is updated so it still matches. New entries go a
 | 6 | 11 Oct | What was still missing before the meeting | `mode_agg` for text, 10 tests, timing, `LICENSE`, `CONTRIBUTING.md` | Approved `mode_agg` and the MIT license. Branch `feat/mode-agg` |
 | 7 | 11 Oct | Animated material to present the work at the meeting | An animated page in English, an Arabic version for my own study and meeting notes (all outside the repo) | Used them to prepare and rehearse the talk |
 | 8 | 11 Oct | A cleaner AI log in one file | This file, with my decisions in their own column | Checked that every line is true |
+| 9 | 11 Oct | Clean, easy-to-read code, and a repo that follows opensource.guide | Shorter functions and comments, clearer `test.sh` output, tidier experiment headers, code of conduct, issue and PR templates, fuller CONTRIBUTING | Chose opensource.guide as the standard. Same results: 27 tests and 3 checks pass, same speed. Branch `refactor/clean-code` |
 
 ## Prompts
 
@@ -143,6 +146,21 @@ Summary of the request: check the AI log, make it cleaner and easier to read, an
 Output:
 - This file. It replaces `ai-log/AI-use log.md` and the 6 files in `ai-log/prompts/` (still in the git history).
 - README and CONTRIBUTING now point here.
+
+### 9. Clean code and open source practices
+
+- Date: 2026-10-11 (Morocco)
+
+> Now clean the code of anything unneeded. Make it clean code that is easy to follow, read and debug, and to the point.
+>
+> Make sure that our code respects https://opensource.guide.
+
+Output:
+- `sql/02` to `sql/04`: shorter header comments, a comment on each variable, the handler returns its result directly, the comma rule written once (`IF(n = 0, '', ',')`). Same logic and results.
+- `test.sh`: runs the tests once instead of twice, prints one line per test, and shows got and expected for a failing test.
+- `experiments/`: the same Run line format in every file; the summary query in `04_scale.sql` is no longer commented out.
+- From the opensource.guide checklist: `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), issue templates for bugs and features, a pull request template, a fuller `CONTRIBUTING.md` (what help is wanted, how to suggest a feature, how to run the tests, where to ask), and a status and help section in the README.
+- Checked: `./test.sh` passes (27 tests, 3 checks), `experiments/05` checks give 0 differences, timing at 10,000 rows is the same (about 0.6 s).
 
 ## Adding a new entry
 
