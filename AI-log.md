@@ -34,6 +34,7 @@ When the code changes, this log is updated so it still matches. New entries go a
 | 7 | 11 Oct | Animated material to present the work at the meeting | An animated page in English, an Arabic version for my own study and meeting notes (all outside the repo) | Used them to prepare and rehearse the talk |
 | 8 | 11 Oct | A cleaner AI log in one file | This file, with my decisions in their own column | Checked that every line is true |
 | 9 | 11 Oct | Clean, easy-to-read code, and a repo that follows opensource.guide | Shorter functions and comments, clearer `test.sh` output, tidier experiment headers, code of conduct, issue and PR templates, fuller CONTRIBUTING | Chose opensource.guide as the standard. Same results: 27 tests and 3 checks pass, same speed. Branch `refactor/clean-code` |
+| 10 | 11 Oct | A more professional README that is easy to follow and shows the new code | New README layout: badges, contents, quick start, "How it works" with the current `median_agg` and a flow diagram, tests section, project tree, contributing and credits | Asked for it to be open source friendly. All numbers and findings unchanged. Branch `refactor/clean-code` |
 
 ## Prompts
 
@@ -161,6 +162,16 @@ Output:
 - `experiments/`: the same Run line format in every file; the summary query in `04_scale.sql` is no longer commented out.
 - From the opensource.guide checklist: `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1), issue templates for bugs and features, a pull request template, a fuller `CONTRIBUTING.md` (what help is wanted, how to suggest a feature, how to run the tests, where to ask), and a status and help section in the README.
 - Checked: `./test.sh` passes (27 tests, 3 checks), `experiments/05` checks give 0 differences, timing at 10,000 rows is the same (about 0.6 s).
+
+### 10. README for open source
+
+- Date: 2026-10-11 (Morocco)
+
+> Update the README with the new code so it looks professional, is easy to follow, and is good for open source contributors.
+
+Output:
+- `README.md`: badges, a contents list, "The functions" table with links to the source, "Quick start", "How it works" (flow diagram and the current `median_agg` code), a "Tests" section with sample `test.sh` output, a short before/after example for `mode_agg`, a project tree, "Contributing" and "License and credits". Findings, charts and timings are the same numbers as before.
+- `CONTRIBUTING.md`: the setup link now points to "Quick start".
 
 ## Adding a new entry
 
