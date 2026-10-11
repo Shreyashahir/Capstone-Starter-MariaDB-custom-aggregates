@@ -29,7 +29,7 @@ When the code changes, this log is updated so it still matches. New entries go a
 | 4 | 10 Oct | More depth, after the supervisor said the work was not enough | `gini` aggregate, hand-written version, check query. Found the INT/INT DECIMAL rounding trap | Added Gini, the second half of my plan. Merged in PR #1 |
 | 5 | 10-11 Oct | Fix the gaps the MariaDB evaluation criteria showed | Experiments against the docs example and SQL features, 10-run timings, faster storage (about 17x at 10,000 rows), tests, `install.sh`, `test.sh` | Merged PR #1 first, then chose to work on depth. Branch `feat/limits` |
 | 6 | 11 Oct | What was still missing before the meeting | `mode_agg` for text, 10 tests, timing, `LICENSE`, `CONTRIBUTING.md` | Approved `mode_agg` and the MIT license. Branch `feat/mode-agg` |
-| 7 | 11 Oct | Animated material to present the work at the meeting | An animated page in English, a step-by-step version in Arabic and meeting notes (all outside the repo) | Used them to prepare and rehearse the talk |
+| 7 | 11 Oct | Animated material to present the work at the meeting | An animated page in English, an Arabic version for my own study and meeting notes (all outside the repo) | Used them to prepare and rehearse the talk |
 | 8 | 11 Oct | A cleaner AI log in one file | This file, with my decisions in their own column | Checked that every line is true |
 
 ## Prompts
@@ -126,13 +126,13 @@ Output:
 - Date: 2026-10-11 (Morocco)
 
 > For the meeting, make me an animated page that shows what we have done, with the data and the technical side as easy animations that explain what the code does.
->
-> Can you make an Arabic version ... so I can find a way to present it to the teacher?
+
+(Then asked for the same in Arabic, to go through the code in my own language.)
 
 Output:
 - An animated page in English: mean vs median, how `median_agg` runs row by row, Gini, mode, limits, speed, tests.
-- The same material in Arabic, with a step-by-step run on the Moroccan airports, the talk in order and likely questions.
-- Both are outside the repo. They are presentation material, not part of the product.
+- An Arabic version for my own study, with a step-by-step run on the Moroccan airports.
+- Both are outside the repo. They are presentation and study material, not part of the product.
 
 ### 8. AI log in one file
 
