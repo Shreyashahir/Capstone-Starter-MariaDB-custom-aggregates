@@ -245,7 +245,7 @@ Use one when there is no built-in (like Gini), when the formula is easy to get w
 | `tests/` | edge-case tests (run by `test.sh`) |
 | `experiments/` | the experiments behind "Past the docs" and "Speed" |
 | `results/` | the saved output of each experiment |
-| `ai-log/` | AI-use log and the prompts |
+| `AI-log.md` | AI log: every AI use and its prompt |
 
 ## License and contributing
 
@@ -254,4 +254,4 @@ MIT, see [LICENSE](LICENSE). How to report a problem or add a function: [CONTRIB
 ## How it was made
 
 - Made by Ayoub Labrinssi.
-- AI use is recorded in [ai-log/AI-use log.md](ai-log/AI-use%20log.md).
+- AI use is recorded in [AI-log.md](AI-log.md).

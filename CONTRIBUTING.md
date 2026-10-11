@@ -20,4 +20,4 @@ Open an issue with:
 - Add a row to the function table in the README.
 
 ## AI use
-If you use an AI tool, add a line to `ai-log/AI-use log.md` and save the prompt in `ai-log/prompts/`.
+If you use an AI tool, add an entry to `AI-log.md` (see "Adding a new entry" at the end of it).
