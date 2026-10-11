@@ -1,4 +1,4 @@
--- Edge-case tests for median_agg and gini.
+-- Edge-case tests for median_agg, gini and mode_agg.
 -- Each row is one test: pass = 1 means the result is what we expect.
 -- Run with ./test.sh (it fails if any row has pass = 0).
 -- Numbers count as equal when they differ by less than 1e-12 of their size
@@ -31,4 +31,21 @@ FROM (
   UNION ALL SELECT 'both in one SELECT (US)',
             (SELECT ROUND(median_agg(routes) + gini(routes), 6) FROM served_airports WHERE country = 'United States'),
             ROUND(3 + 0.8153623872310896, 6)
+) AS cases;
+
+-- mode_agg returns text, so these compare strings.
+SELECT test, got, expected, IF(got <=> expected, 1, 0) AS pass
+FROM (
+  SELECT 'mode: clear winner'        AS test, (SELECT mode_agg(v) FROM (SELECT 'b' AS v UNION ALL SELECT 'a' UNION ALL SELECT 'b') t) AS got, 'b' AS expected
+  UNION ALL SELECT 'mode: tie, smallest wins', (SELECT mode_agg(v) FROM (SELECT 'b' AS v UNION ALL SELECT 'a' UNION ALL SELECT 'b' UNION ALL SELECT 'a') t), 'a'
+  UNION ALL SELECT 'mode: single value',       (SELECT mode_agg(v) FROM (SELECT 'KLM' AS v) t), 'KLM'
+  UNION ALL SELECT 'mode: commas and quotes',  (SELECT mode_agg(v) FROM (SELECT 'x, "y"' AS v UNION ALL SELECT 'x, "y"' UNION ALL SELECT 'z') t), 'x, "y"'
+  UNION ALL SELECT 'mode: Arabic text',        (SELECT mode_agg(v) FROM (SELECT 'مرحبا' AS v UNION ALL SELECT 'مرحبا' UNION ALL SELECT 'e') t), 'مرحبا'
+  UNION ALL SELECT 'mode: case ignored',       (SELECT mode_agg(v) FROM (SELECT 'Lufthansa' AS v UNION ALL SELECT 'LUFTHANSA' UNION ALL SELECT 'KLM') t), 'Lufthansa'
+  UNION ALL SELECT 'mode: numbers tie as text', (SELECT mode_agg(v) FROM (SELECT 9 AS v UNION ALL SELECT 10) t), '10'
+  UNION ALL SELECT 'mode: NULL ignored',       (SELECT mode_agg(v) FROM (SELECT NULL AS v UNION ALL SELECT NULL UNION ALL SELECT 'a') t), 'a'
+  UNION ALL SELECT 'mode: empty group',        (SELECT mode_agg(v) FROM (SELECT 'a' AS v FROM DUAL WHERE 0) t), NULL
+  UNION ALL SELECT 'mode: top airline, Morocco',
+            (SELECT mode_agg(al.name) FROM routes r JOIN airports ap ON ap.apid = r.src_apid
+             JOIN airlines al ON al.alid = r.alid WHERE ap.country = 'Morocco'), 'Royal Air Maroc'
 ) AS cases;
