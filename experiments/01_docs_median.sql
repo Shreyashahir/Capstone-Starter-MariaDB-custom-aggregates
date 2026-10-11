@@ -1,7 +1,8 @@
 -- Experiment 1: the median example from the MariaDB documentation
 -- (Stored Aggregate Functions page), copied as written, next to median_agg.
 -- The docs version keeps the group in a TEMPORARY TABLE called tt.
--- Run with --force so the script continues after an expected error.
+-- Run (--force: 1e is expected to fail):
+--   docker exec -i openflights-mariadb mariadb -uroot -p"$DBPW" flightdb2 --force -t -v < experiments/01_docs_median.sql
 
 DELIMITER //
 CREATE OR REPLACE AGGREGATE FUNCTION medi_int(x INT) RETURNS DOUBLE
@@ -41,7 +42,7 @@ FROM (SELECT 5 AS v UNION ALL SELECT NULL UNION ALL SELECT 1) AS t;
 SELECT medi_int(v) AS docs_version, median_agg(v) AS median_agg
 FROM (SELECT 1.5 AS v UNION ALL SELECT 2.5) AS t;
 
--- 1d. Two medians in the same SELECT (e.g. routes and elevation).
+-- 1d. Two medians in the same SELECT (routes and apid).
 SELECT country, medi_int(routes) AS med_routes, medi_int(apid) AS med_apid
 FROM served_airports GROUP BY country LIMIT 3;
 

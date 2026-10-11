@@ -1,5 +1,6 @@
 -- Experiment 2: what the documentation does not say.
--- Run with --force: some of these are expected to fail.
+-- Run (--force: some of these are expected to fail):
+--   docker exec -i openflights-mariadb mariadb -uroot -p"$DBPW" flightdb2 --force -t -v < experiments/02_limits.sql
 
 -- 2a. As a window function, like the built-in MEDIAN() OVER (...)
 SELECT country, routes,
