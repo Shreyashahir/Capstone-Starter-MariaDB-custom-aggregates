@@ -14,6 +14,8 @@ This repo builds three aggregates and uses them on the [openflights](https://git
 
 Each one is shown next to the query you would write without it.
 
+Status: a student project, tested on MariaDB 12.3.3 only. Fine for learning and analysis, not tested for production use.
+
 ## Findings so far
 
 Data: 3,211 airports with at least one departing route. World mean is 20.9 routes per airport, median is 4, max is 915.
@@ -238,7 +240,7 @@ Use one when there is no built-in (like Gini), when the formula is easy to get w
 
 ## Repo layout
 
-| Folder | What is in it |
+| Path | What is in it |
 |---|---|
 | `sql/` | the view and the three functions (installed by `install.sh`) |
 | `queries/` | before/after/check queries and the chart data |
@@ -247,9 +249,12 @@ Use one when there is no built-in (like Gini), when the formula is easy to get w
 | `results/` | the saved output of each experiment |
 | `AI-log.md` | AI log: every AI use and its prompt |
 
-## License and contributing
+## License, contributing and help
 
-MIT, see [LICENSE](LICENSE). How to report a problem or add a function: [CONTRIBUTING.md](CONTRIBUTING.md).
+- License: MIT, see [LICENSE](LICENSE).
+- Contributing: how to report a bug, suggest a feature or add a function is in [CONTRIBUTING.md](CONTRIBUTING.md).
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) (Contributor Covenant 2.1).
+- Help: open an [issue](https://github.com/ayoublabrinssi/Capstone-Starter-MariaDB-custom-aggregates/issues).
 
 ## How it was made
 
