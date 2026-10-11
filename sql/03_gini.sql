@@ -1,44 +1,42 @@
--- gini(x): Gini coefficient of x in each group, between 0 and 1.
---   0 = every row has the same value (perfectly even).
---   close to 1 = one row holds almost everything.
--- NULLs are ignored. Returns NULL for an empty group or when all values are 0.
--- Values are expected to be >= 0 (counts, sizes, amounts).
+-- gini(x): how unevenly x is spread in each group, from 0 to 1.
+--   0 = all values equal. Close to 1 = one row holds almost everything.
+--   NULLs are skipped. Returns NULL for an empty group or when the total is 0.
+--   Meant for values >= 0 (counts, sizes, amounts).
 --
--- Formula, with the n values sorted ascending and i = 1..n:
---   G = 2 * SUM(i * x_i) / (n * SUM(x)) - (n + 1) / n
+-- Formula, with the n values sorted and ranked 1..n:
+--   G = 2 * SUM(rank * x) / (n * total) - (n + 1) / n
 --
--- How it works: same pattern as median_agg. FETCH GROUP NEXT ROW collects the
--- group into a comma-separated text list and keeps a running total. At the end
--- of the group the list is read with JSON_TABLE, sorted with ROW_NUMBER(), and
--- the formula is applied.
+-- Same pattern as median_agg: collect the values in a text list, compute at the end.
 
 DELIMITER //
 
 CREATE OR REPLACE AGGREGATE FUNCTION gini(x DOUBLE) RETURNS DOUBLE
 BEGIN
-  DECLARE vals LONGTEXT DEFAULT '';
-  DECLARE n INT DEFAULT 0;
-  DECLARE total DOUBLE DEFAULT 0;
-  DECLARE result DOUBLE DEFAULT NULL;
+  DECLARE vals LONGTEXT DEFAULT '';  -- the group's values, comma-separated
+  DECLARE n INT DEFAULT 0;           -- how many values so far
+  DECLARE total DOUBLE DEFAULT 0;    -- their sum
 
+  -- Runs once, when the group has no more rows.
   DECLARE CONTINUE HANDLER FOR NOT FOUND
   BEGIN
-    IF n > 0 AND total > 0 THEN
-      -- (n + 1) / n is done in DOUBLE: with two INTs MariaDB divides in DECIMAL
-      -- and keeps only div_precision_increment (default 4) decimals.
-      SELECT 2 * SUM(s.rn * s.v) / (n * total) - (n + 1) / CAST(n AS DOUBLE) INTO result
+    IF total <= 0 THEN
+      RETURN NULL;
+    END IF;
+    -- CAST to DOUBLE: INT / INT gives a DECIMAL rounded to 4 places.
+    RETURN (
+      SELECT 2 * SUM(ranked.rn * ranked.v) / (n * total) - (n + 1) / CAST(n AS DOUBLE)
       FROM (
         SELECT jt.v, ROW_NUMBER() OVER (ORDER BY jt.v) AS rn
         FROM JSON_TABLE(CONCAT('[', vals, ']'), '$[*]' COLUMNS (v DOUBLE PATH '$')) AS jt
-      ) AS s;
-    END IF;
-    RETURN result;
+      ) AS ranked
+    );
   END;
 
+  -- Runs once per row.
   LOOP
     FETCH GROUP NEXT ROW;
     IF x IS NOT NULL THEN
-      SET vals = IF(n = 0, CAST(x AS CHAR), CONCAT(vals, ',', x));
+      SET vals = CONCAT(vals, IF(n = 0, '', ','), x);
       SET n = n + 1;
       SET total = total + x;
     END IF;

@@ -2,83 +2,46 @@ A project for area 2, "Custom aggregate functions in SQL" for the [MariaDB stude
 
 # Custom aggregate functions in MariaDB
 
-MariaDB lets you write your own aggregate function in SQL with `CREATE AGGREGATE FUNCTION` and `FETCH GROUP NEXT ROW`. MySQL has no SQL-level equivalent: there you write a C UDF or do without.
+Three aggregate functions written in plain SQL, used on real flight data: `median_agg`, `gini` and `mode_agg`.
 
-This repo builds three aggregates and uses them on the [openflights](https://github.com/mariadb/openflights) data:
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![MariaDB 12.3.3](https://img.shields.io/badge/MariaDB-12.3.3-003545.svg)](https://mariadb.org/)
+[![Tests: 27 + 3 checks](https://img.shields.io/badge/tests-27%20%2B%203%20checks-brightgreen.svg)](#tests)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-orange.svg)](CONTRIBUTING.md)
 
-| Function | Status | Question it answers |
-|---|---|---|
-| `median_agg(x)` | working | What is the typical number of routes per airport in a country? |
-| `gini(x)` | working | How concentrated are a country's routes in a few airports? |
-| `mode_agg(x)` | working | Which airline runs the most routes from each country? (works on text) |
+MariaDB lets you write your own aggregate function in SQL with `CREATE AGGREGATE FUNCTION` and `FETCH GROUP NEXT ROW`. MySQL has no SQL-level equivalent: there you write a C UDF or do without. This repo builds three aggregates, runs them on the [openflights](https://github.com/mariadb/openflights) data, compares each one with the query you would write without it, and tests where they break.
 
-Each one is shown next to the query you would write without it.
+> **Status:** a student project, tested on MariaDB 12.3.3 only. Fine for learning and analysis, not tested for production use.
 
-## Findings so far
+## Contents
 
-Data: 3,211 airports with at least one departing route. World mean is 20.9 routes per airport, median is 4, max is 915.
+- [The functions](#the-functions)
+- [Quick start](#quick-start)
+- [Use them on your own table](#use-them-on-your-own-table)
+- [How it works](#how-it-works)
+- [Findings](#findings)
+- [Before and after](#before-and-after)
+- [Past the docs: what we tested](#past-the-docs-what-we-tested)
+- [Tests](#tests)
+- [Speed](#speed)
+- [When not to use a custom aggregate](#when-not-to-use-a-custom-aggregate)
+- [Project structure](#project-structure)
+- [Contributing](#contributing)
+- [License and credits](#license-and-credits)
 
-- Most airports are small. 1,883 of 3,211 (59%) have 5 routes or fewer, while 162 hubs have more than 100.
-- Because of that, the mean is misleading. In the US the mean is 23.8 routes per airport but the median is 3. A few hubs pull the mean up.
-- That is why a median aggregate is worth having: it gives the typical airport, not the hub-inflated average.
-- `gini(x)` puts a number on that concentration (0 = all airports equal, close to 1 = one hub has almost everything). World value: 0.776. Among the 15 biggest countries the US is the most concentrated (0.815) and Indonesia the least (0.675).
-- `mode_agg(x)` finds the airline with the most departing routes in each country. Often it is not the national airline. Ryanair is on top in 7 countries, including the UK, Spain and Italy. Ethiopian Airlines is on top in 9 countries, 8 of them outside Ethiopia (Benin, Chad, Gabon, Guinea, Malawi, Mali, Niger, Togo). In Morocco it is Royal Air Maroc, with 117 of 310 routes.
+## The functions
 
-Timings, limits and a comparison with the docs' own example are in [Past the docs](#past-the-docs-what-we-tested) and [Speed](#speed).
+| Function | Returns | Question it answers on openflights | Source |
+|---|---|---|---|
+| `median_agg(x)` | the middle value (mean of the two middle values for an even count) | What is the typical number of routes per airport in a country? | [sql/02_median_agg.sql](sql/02_median_agg.sql) |
+| `gini(x)` | 0 (all equal) to 1 (one row holds everything) | How concentrated are a country's routes in a few airports? | [sql/03_gini.sql](sql/03_gini.sql) |
+| `mode_agg(x)` | the most common value, works on text | Which airline runs the most routes from each country? | [sql/04_mode_agg.sql](sql/04_mode_agg.sql) |
 
-### Chart 1: Median routes per airport, top 15 countries
+All three skip NULLs and return NULL for an empty group, like `AVG()`.
 
-```mermaid
-xychart-beta
-    title "Median routes per served airport"
-    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
-    y-axis "Routes" 0 --> 12
-    bar [3, 3, 10, 3, 2, 5, 7, 4, 5, 7, 7, 9.5, 4, 2, 3]
-```
+## Quick start
 
-Countries are the 15 with the most served airports, from left to right.
-
-### Chart 2: Mean (bars) vs median (line)
-
-```mermaid
-xychart-beta
-    title "Mean vs median routes per served airport"
-    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
-    y-axis "Routes" 0 --> 55
-    bar [23.8, 9.0, 47.5, 11.7, 9.8, 17.8, 20.5, 13.2, 20.7, 18.9, 35.1, 51.2, 13.2, 7.4, 22.7]
-    line [3, 3, 10, 3, 2, 5, 7, 4, 5, 7, 7, 9.5, 4, 2, 3]
-```
-
-The gap between the bar and the line shows how much a few big hubs distort the mean.
-
-### Chart 3: How many routes airports have (whole world)
-
-```mermaid
-xychart-beta
-    title "Airports by number of departing routes"
-    x-axis "Routes per airport" ["1", "2", "3-5", "6-10", "11-20", "21-50", "51-100", "101+"]
-    y-axis "Airports" 0 --> 800
-    bar [596, 542, 745, 433, 308, 277, 148, 162]
-```
-
-### Chart 4: Gini of routes per airport, top 15 countries
-
-```mermaid
-xychart-beta
-    title "Gini coefficient of routes per served airport"
-    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
-    y-axis "Gini" 0 --> 1
-    bar [0.815, 0.703, 0.717, 0.704, 0.755, 0.733, 0.715, 0.675, 0.750, 0.688, 0.754, 0.744, 0.687, 0.700, 0.802]
-```
-
-All chart numbers come from [queries/chart_data.sql](queries/chart_data.sql) on MariaDB 12.3.3. Charts are Mermaid, so GitHub draws them from the text above.
-
-## Requirements
-
-- Docker with Compose (tested with Colima on an Intel Mac)
-- MariaDB 12.3.3 (image `mariadb:lts` from the openflights compose file, checked with `SELECT VERSION();`)
-
-## Setup
+**Requirements:** Docker with Compose (tested with Colima on an Intel Mac) and MariaDB 12.3.3 (the `mariadb:lts` image from the openflights compose file).
 
 1. Start MariaDB with the openflights data:
 
@@ -89,7 +52,7 @@ All chart numbers come from [queries/chart_data.sql](queries/chart_data.sql) on 
    cd ..
    ```
 
-2. Install the view and the functions, then run the tests:
+2. Install the view and the three functions, then run the tests:
 
    ```sh
    ./install.sh
@@ -99,15 +62,14 @@ All chart numbers come from [queries/chart_data.sql](queries/chart_data.sql) on 
 3. Run a query:
 
    ```sh
-   DBPW=flightpw
-   docker exec -i openflights-mariadb mariadb -uroot -p"$DBPW" flightdb2 < queries/median_after.sql
+   docker exec -i openflights-mariadb mariadb -uroot -pflightpw flightdb2 < queries/median_after.sql
    ```
 
-The password `flightpw` comes from the openflights compose file and is for local use only. The scripts read it from `DBPW` (default `flightpw`), so it is set in one place.
+The password `flightpw` comes from the openflights compose file and is for local use only. Both scripts read it from `DBPW`, so you can change it with `DBPW=yourpw ./install.sh`.
 
-## Try it on your own table
+## Use them on your own table
 
-After `./install.sh` the functions work on any table in `flightdb2`. For example:
+After `./install.sh` the functions work on any table in `flightdb2`:
 
 ```sql
 CREATE TABLE grades (course VARCHAR(20), student VARCHAR(20), grade DOUBLE, letter CHAR(1));
@@ -128,34 +90,159 @@ GROUP BY course;
 | Java | 3.3 | 0.143 | B |
 | SQL | 1.3 | 0.227 | A |
 
-Use them like `AVG()` or `COUNT()`: in a `SELECT` with `GROUP BY`. They do not work with `OVER`, `DISTINCT` or directly in `HAVING` (see below).
+Use them like `AVG()` or `COUNT()`: in a `SELECT` with `GROUP BY`. They do not work with `OVER`, `DISTINCT` or directly in `HAVING` (see [what works and what does not](#what-works-and-what-does-not)).
 
-## Data model
+## How it works
 
-| Object | What it is |
-|---|---|
-| `airports`, `routes`, `airlines` | openflights tables, unchanged |
-| `served_airports` (view) | one row per airport with at least one departing route: `apid`, `name`, `country`, `routes` |
+MariaDB hands a stored aggregate one row at a time. All three functions follow the same pattern: collect the values of the group in a text list, then compute the answer once when the group ends.
 
-Airports with no routes are left out. Most of them are small airfields, and including them as zeros would hide the shape of real traffic.
+```mermaid
+flowchart LR
+    A[Rows of one group] --> B[FETCH GROUP NEXT ROW]
+    B --> C["Add the value to a text list: '28,1,18,...'"]
+    C --> B
+    B -- no rows left --> D[NOT FOUND handler runs]
+    D --> E[JSON_TABLE reads the list once]
+    E --> F[Sort and pick the middle]
+    F --> G[RETURN the median]
+```
+
+This is `median_agg` from [sql/02_median_agg.sql](sql/02_median_agg.sql):
+
+```sql
+CREATE OR REPLACE AGGREGATE FUNCTION median_agg(x DOUBLE) RETURNS DOUBLE
+BEGIN
+  DECLARE vals LONGTEXT DEFAULT '';  -- the group's values, comma-separated
+  DECLARE n INT DEFAULT 0;           -- how many values so far
+
+  -- Runs once, when the group has no more rows.
+  DECLARE CONTINUE HANDLER FOR NOT FOUND
+  BEGIN
+    DECLARE take INT DEFAULT 2 - n % 2;      -- odd n: 1 middle value, even n: 2
+    DECLARE skip INT DEFAULT (n - 1) DIV 2;  -- values below the middle
+    RETURN (
+      SELECT AVG(v) FROM (
+        SELECT jt.v
+        FROM JSON_TABLE(CONCAT('[', vals, ']'), '$[*]' COLUMNS (v DOUBLE PATH '$')) AS jt
+        ORDER BY jt.v
+        LIMIT take OFFSET skip
+      ) AS middle
+    );
+  END;
+
+  -- Runs once per row.
+  LOOP
+    FETCH GROUP NEXT ROW;
+    IF x IS NOT NULL THEN
+      SET vals = CONCAT(vals, IF(n = 0, '', ','), x);
+      SET n = n + 1;
+    END IF;
+  END LOOP;
+END
+```
+
+- The handler is written at the top but runs at the end, when `FETCH GROUP NEXT ROW` finds no more rows.
+- `gini` uses the same loop and keeps a running total. At the end it ranks the values with `ROW_NUMBER()` and applies `G = 2 * SUM(rank * x) / (n * total) - (n + 1) / n`.
+- `mode_agg` wraps each value with `JSON_QUOTE`, so commas and quotes inside a name do not break the list. At the end it groups the values and returns the most common one. Ties go to the smallest value, so the result is always the same.
+
+**Data model.** The functions run on one view, `served_airports` ([sql/01_served_airports.sql](sql/01_served_airports.sql)): one row per airport with at least one departing route, with `apid`, `name`, `country` and `routes`. Airports with no routes are left out. Most of them are small airfields, and counting them as zeros would hide the shape of real traffic. The openflights tables `airports`, `routes` and `airlines` are not changed.
+
+## Findings
+
+Data: 3,211 airports with at least one departing route. The world mean is 20.9 routes per airport, the median is 4 and the maximum is 915.
+
+- **Most airports are small.** 1,883 of 3,211 (59%) have 5 routes or fewer, while 162 hubs have more than 100.
+- **So the mean is misleading.** In the US the mean is 23.8 routes per airport but the median is 3. A few hubs pull the mean up. A median gives the typical airport.
+- **`gini` puts a number on that concentration.** World value: 0.776. Among the 15 biggest countries the US is the most concentrated (0.815) and Indonesia the least (0.675).
+- **The top airline is often not the national one.** Ryanair is on top in 7 countries, including the UK, Spain and Italy. Ethiopian Airlines is on top in 9 countries, 8 of them outside Ethiopia (Benin, Chad, Gabon, Guinea, Malawi, Mali, Niger, Togo). In Morocco it is Royal Air Maroc, with 117 of 310 routes.
+
+### Median routes per airport, top 15 countries
+
+```mermaid
+xychart-beta
+    title "Median routes per served airport"
+    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
+    y-axis "Routes" 0 --> 12
+    bar [3, 3, 10, 3, 2, 5, 7, 4, 5, 7, 7, 9.5, 4, 2, 3]
+```
+
+### Mean (bars) vs median (line)
+
+```mermaid
+xychart-beta
+    title "Mean vs median routes per served airport"
+    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
+    y-axis "Routes" 0 --> 55
+    bar [23.8, 9.0, 47.5, 11.7, 9.8, 17.8, 20.5, 13.2, 20.7, 18.9, 35.1, 51.2, 13.2, 7.4, 22.7]
+    line [3, 3, 10, 3, 2, 5, 7, 4, 5, 7, 7, 9.5, 4, 2, 3]
+```
+
+The gap between a bar and the line shows how much a few big hubs distort the mean.
+
+### How many routes airports have (whole world)
+
+```mermaid
+xychart-beta
+    title "Airports by number of departing routes"
+    x-axis "Routes per airport" ["1", "2", "3-5", "6-10", "11-20", "21-50", "51-100", "101+"]
+    y-axis "Airports" 0 --> 800
+    bar [596, 542, 745, 433, 308, 277, 148, 162]
+```
+
+### Gini of routes per airport, top 15 countries
+
+```mermaid
+xychart-beta
+    title "Gini coefficient of routes per served airport"
+    x-axis ["US", "Canada", "China", "Brazil", "Australia", "Russia", "India", "Indonesia", "Japan", "Mexico", "France", "UK", "Norway", "Colombia", "Turkey"]
+    y-axis "Gini" 0 --> 1
+    bar [0.815, 0.703, 0.717, 0.704, 0.755, 0.733, 0.715, 0.675, 0.750, 0.688, 0.754, 0.744, 0.687, 0.700, 0.802]
+```
+
+Countries are the 15 with the most served airports, from left to right. All chart numbers come from [queries/chart_data.sql](queries/chart_data.sql).
 
 ## Before and after
 
-| Query | Without the custom aggregate | With it |
-|---|---|---|
-| Median routes per airport, per country | [queries/median_before.sql](queries/median_before.sql) | [queries/median_after.sql](queries/median_after.sql) |
-| Gini of routes per airport, per country | [queries/gini_before.sql](queries/gini_before.sql) | [queries/gini_after.sql](queries/gini_after.sql) |
-| Top airline per country | [queries/mode_before.sql](queries/mode_before.sql) | [queries/mode_after.sql](queries/mode_after.sql) |
+Each function comes with the query you would write without it, the query with it, and a check that both give the same answer.
 
-[queries/median_check.sql](queries/median_check.sql), [queries/gini_check.sql](queries/gini_check.sql) and [queries/mode_check.sql](queries/mode_check.sql) check that both versions give the same result (0 rows = they agree for every country).
+| Question | Without the custom aggregate | With it | Check (0 rows = same answer for every country) |
+|---|---|---|---|
+| Median routes per airport, per country | [median_before.sql](queries/median_before.sql) | [median_after.sql](queries/median_after.sql) | [median_check.sql](queries/median_check.sql) |
+| Gini of routes per airport, per country | [gini_before.sql](queries/gini_before.sql) | [gini_after.sql](queries/gini_after.sql) | [gini_check.sql](queries/gini_check.sql) |
+| Top airline per country | [mode_before.sql](queries/mode_before.sql) | [mode_after.sql](queries/mode_after.sql) | [mode_check.sql](queries/mode_check.sql) |
+
+For example, the top airline per country (shortened from the files) without `mode_agg` needs a count, a rank and a filter:
+
+```sql
+SELECT country, airline, routes
+FROM (
+  SELECT a.country, al.name AS airline, COUNT(*) AS routes,
+         ROW_NUMBER() OVER (PARTITION BY a.country ORDER BY COUNT(*) DESC, al.name) AS rn
+  FROM routes r
+  JOIN airports a ON a.apid = r.src_apid
+  JOIN airlines al ON al.alid = r.alid
+  GROUP BY a.country, al.name
+) AS ranked
+WHERE rn = 1;
+```
+
+With it, one call:
+
+```sql
+SELECT a.country, mode_agg(al.name) AS top_airline
+FROM routes r
+JOIN airports a ON a.apid = r.src_apid
+JOIN airlines al ON al.alid = r.alid
+GROUP BY a.country;
+```
 
 ### A trap found on the way
 
-The first hand-written Gini query and the first `gini` function both returned slightly wrong numbers (e.g. `0.000000000333` instead of `0` for three equal values). The cause: in MariaDB, `INT / INT` is computed as DECIMAL and kept to `div_precision_increment` decimals (default 4). So `(n + 1) / n` became `1.3333`. Both versions now cast to DOUBLE. The custom function hides this fix in one place; every hand-written copy of the formula has to remember it.
+The first hand-written Gini query and the first `gini` function both returned slightly wrong numbers, for example `0.000000000333` instead of `0` for three equal values. The cause: in MariaDB, `INT / INT` is computed as DECIMAL and kept to `div_precision_increment` decimals (default 4), so `(n + 1) / n` became `1.3333`. Both versions now cast to DOUBLE. The function fixes this in one place; every hand-written copy of the formula has to remember it.
 
 ## Past the docs: what we tested
 
-The MariaDB docs show how to write a stored aggregate, with a median example, but say little about where it breaks. These experiments check that. Each one is a SQL file in [experiments/](experiments/) with its output saved in [results/](results/). All runs are on MariaDB 12.3.3.
+The MariaDB docs show how to write a stored aggregate, with a median example, but say little about where it breaks. Each experiment below is a SQL file in [experiments/](experiments/), and its output is saved in [results/](results/). All runs are on MariaDB 12.3.3.
 
 ### The docs' median vs ours
 
@@ -170,7 +257,7 @@ The docs' example (`medi_int`, copied as written in [experiments/01_docs_median.
 | Next call after that error | fails too: `tt` was left behind | works |
 | Group of 20,000 rows | 433 ms | 2,193 ms |
 
-The clash is a known server issue: [MDEV-17246](https://jira.mariadb.org/browse/MDEV-17246) "Stored Functions need their own temporary table namespace" (open). So the docs' version is faster on big groups but cannot be used twice in one query. Ours is safe to combine, but slower on big groups (see Speed).
+The clash is a known server issue: [MDEV-17246](https://jira.mariadb.org/browse/MDEV-17246) "Stored Functions need their own temporary table namespace" (open). So the docs' version is faster on big groups but cannot be used twice in one query. Ours is safe to combine, but slower on big groups (see [Speed](#speed)).
 
 ### What works and what does not
 
@@ -178,7 +265,7 @@ The clash is a known server issue: [MDEV-17246](https://jira.mariadb.org/browse/
 |---|---|---|
 | As a window function, `median_agg(x) OVER (...)` | no, `ERROR 1064` | Stored aggregates cannot be window functions. Tracked in [MDEV-11263](https://jira.mariadb.org/browse/MDEV-11263) (stalled). Use the built-in `MEDIAN() OVER` instead. |
 | `median_agg(DISTINCT x)` | no, `ERROR 1064` | Workaround: `SELECT median_agg(r) FROM (SELECT DISTINCT routes AS r ...) d` |
-| In `HAVING`, e.g. `HAVING gini(routes) > 0.8` | no, `ERROR 1054 Unknown column 'routes' in 'HAVING'` | Built-in `SUM`/`AVG` work there. Same error on a plain table with 2 columns. Workarounds: use the alias (`HAVING g > 0.8`) or a derived table. We found no JIRA issue for this (searched 11 Oct 2026). |
+| In `HAVING`, e.g. `HAVING gini(routes) > 0.8` | no, `ERROR 1054 Unknown column 'routes' in 'HAVING'` | Built-in `SUM` and `AVG` work there. Same error on a plain table with 2 columns. Workarounds: use the alias (`HAVING g > 0.8`) or a derived table. We found no JIRA issue for this (searched 11 Oct 2026). |
 | In `ORDER BY` | yes | |
 | `WITH ROLLUP` | yes | Germany 22.5, Morocco 11, total 18 |
 | Two custom aggregates in one SELECT | yes | |
@@ -187,11 +274,28 @@ The clash is a known server issue: [MDEV-17246](https://jira.mariadb.org/browse/
 | Empty group | returns NULL | Right for a median. A custom count would also return NULL, not 0: [MDEV-24580](https://jira.mariadb.org/browse/MDEV-24580) |
 | Text input, `median_agg(name)` | no, `ERROR 1366` | in strict mode, which is the default |
 
-Edge cases (odd/even counts, NULLs, negatives, decimals, empty groups, Gini of equal values, ties, text with commas and quotes, Arabic text) are in [tests/tests.sql](tests/tests.sql): 27 tests plus the 3 check queries. Run them with `./test.sh`.
+## Tests
+
+```sh
+./test.sh
+```
+
+[tests/tests.sql](tests/tests.sql) has 27 edge-case tests: odd and even counts, NULLs, negatives, decimals, empty groups, Gini of equal values, ties, text with commas and quotes, Arabic text, and a `ROLLUP` total. `test.sh` also runs the 3 check queries on the whole data set. It prints one line per test, shows what a failing test got and expected, and exits with 1 if anything fails:
+
+```text
+ok    median: odd count
+ok    median: even count
+...
+ok    mode: top airline, Morocco
+ok    queries/median_check.sql
+ok    queries/gini_check.sql
+ok    queries/mode_check.sql
+All tests passed.
+```
 
 ## Speed
 
-[experiments/04_scale.sql](experiments/04_scale.sql) times each function on one group of n generated rows (Sequence engine, same values every run). Each size is run 10 times. The table shows the median time with the fastest and slowest run. Full output: [results/04_scale.txt](results/04_scale.txt).
+[experiments/04_scale.sql](experiments/04_scale.sql) times each function on one group of n generated rows (Sequence engine, same values every run). Each size is run 10 times. The table shows the median time, with the fastest and slowest run for 10,000 rows. Full output: [results/04_scale.txt](results/04_scale.txt).
 
 | Rows in the group | `AVG` (baseline) | built-in `MEDIAN() OVER` | docs `medi_int` | `median_agg` | `gini` | first `median_agg` (JSON) |
 |---|---|---|---|---|---|---|
@@ -201,7 +305,7 @@ Edge cases (odd/even counts, NULLs, negatives, decimals, empty groups, Gini of e
 | 10,000 | 3.8 ms | 8.2 ms | 205 ms (198 to 317) | 614 ms (572 to 714) | 603 ms (574 to 755) | 10,271 ms (9,954 to 14,802) |
 | 20,000 | 6.3 ms | 17 ms | 433 ms | 2,193 ms | 2,197 ms | not run |
 
-Mac: Intel, 2017. MariaDB runs in Colima (2 CPUs, 4 GB).
+Machine: Intel Mac (2017), MariaDB in Colima (2 CPUs, 4 GB).
 
 ```mermaid
 xychart-beta
@@ -213,18 +317,18 @@ xychart-beta
 
 What this shows:
 
-- **Our first version was very slow on big groups.** It used `JSON_ARRAY_APPEND` for every row, which reads and copies the whole array each time: 10 s for 10,000 rows. Keeping the values in a plain text list and reading it as JSON only once at the end gives the same results 17 times faster (614 ms). That old version is kept in [experiments/05_faster_median.sql](experiments/05_faster_median.sql) and checked against the new one.
-- **The cost still grows faster than the group.** Doubling the rows from 10,000 to 20,000 makes `median_agg` about 3.6 times slower, because the text list is copied when it grows. The docs' temp-table version grows in line with the rows.
+- **Our first version was very slow on big groups.** It used `JSON_ARRAY_APPEND` for every row, which reads and copies the whole array each time: 10 s for 10,000 rows. Keeping the values in a plain text list and reading it as JSON once at the end gives the same results 17 times faster (614 ms). The old version is kept in [experiments/05_faster_median.sql](experiments/05_faster_median.sql) and checked against the new one.
+- **The cost still grows faster than the group.** Doubling the rows from 10,000 to 20,000 makes `median_agg` about 3.6 times slower, because the text list is copied as it grows. The docs' temp-table version grows in line with the rows.
 - **A built-in is always faster.** `MEDIAN() OVER` is about 125 times faster than `median_agg` at 20,000 rows.
 - **`mode_agg` hits the same wall on real data.** Top airline per country over all 67,663 routes takes 5.2 s with `mode_agg` and 0.44 s with the hand-written `ROW_NUMBER()` query (10 runs, [results/06_mode_timing.txt](results/06_mode_timing.txt)). Most of that time is the US group, which has 13,056 routes.
-- For the median and Gini on openflights none of this matters: the biggest group is the US with 550 airports, and `median_agg` plus `gini` over all 225 countries take about 0.5 s.
+- **On openflights the median and Gini are fast enough.** The biggest group is the US with 550 airports, and `median_agg` plus `gini` over all 225 countries take about 0.5 s.
 
 One timing run first came out negative (the VM clock was corrected while it ran), so that size was run again.
 
 ## When not to use a custom aggregate
 
 - **When a built-in does the job.** For a median use `MEDIAN()` or `PERCENTILE_CONT()` as window functions. They are far faster.
-- **On big groups** (tens of thousands of rows in one group). A stored aggregate that has to keep every value gets slow. Pre-aggregate, or use a built-in.
+- **On big groups**, with tens of thousands of rows in one group. A stored aggregate that keeps every value gets slow. Pre-aggregate, or use a built-in.
 - **When you need it as a window function, with DISTINCT, or directly in HAVING.** None of these work (see the table above).
 - **When the function needs a temporary table** and may be called twice in one query. Keep state in variables instead.
 
@@ -234,24 +338,37 @@ Use one when there is no built-in (like Gini), when the formula is easy to get w
 
 - **PostgreSQL** has `CREATE AGGREGATE` with a state function and a final function, written in SQL or PL/pgSQL. It can be used as a window function.
 - **MySQL** has no SQL-level aggregates. You write a C UDF.
-- MariaDB 13.2 is adding a C plugin interface for aggregates: [MDEV-40672](https://jira.mariadb.org/browse/MDEV-40672) "Pluggable aggregate functions" (in testing on 11 Oct 2026). That is for C code; this project stays in SQL.
+- **MariaDB 13.2** is adding a C plugin interface for aggregates: [MDEV-40672](https://jira.mariadb.org/browse/MDEV-40672) "Pluggable aggregate functions" (in testing on 11 Oct 2026). That is for C code; this project stays in SQL.
 
-## Repo layout
+## Project structure
 
-| Folder | What is in it |
-|---|---|
-| `sql/` | the view and the three functions (installed by `install.sh`) |
-| `queries/` | before/after/check queries and the chart data |
-| `tests/` | edge-case tests (run by `test.sh`) |
-| `experiments/` | the experiments behind "Past the docs" and "Speed" |
-| `results/` | the saved output of each experiment |
-| `AI-log.md` | AI log: every AI use and its prompt |
+```text
+.
+├── sql/            the view and the three functions (installed by install.sh)
+├── queries/        before / after / check queries and the chart data
+├── tests/          edge-case tests (run by test.sh)
+├── experiments/    the experiments behind "Past the docs" and "Speed"
+├── results/        the saved output of each experiment
+├── install.sh      installs the view and the functions
+├── test.sh         runs the tests and the checks
+├── AI-log.md       every AI use and its prompt
+├── CONTRIBUTING.md how to report a bug, suggest a feature or add a function
+└── CODE_OF_CONDUCT.md
+```
 
-## License and contributing
+## Contributing
 
-MIT, see [LICENSE](LICENSE). How to report a problem or add a function: [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome, small ones too. Good places to start:
 
-## How it was made
+- a new aggregate, for example a percentile or a weighted average,
+- more edge cases in [tests/tests.sql](tests/tests.sql),
+- results on other MariaDB versions,
+- fixes to this README.
 
-- Made by Ayoub Labrinssi.
-- AI use is recorded in [AI-log.md](AI-log.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for how to report a bug, suggest a feature and open a pull request. This project follows the [Contributor Covenant code of conduct](CODE_OF_CONDUCT.md). Questions go in an [issue](https://github.com/ayoublabrinssi/Capstone-Starter-MariaDB-custom-aggregates/issues).
+
+## License and credits
+
+- Code: [MIT License](LICENSE).
+- Data: [OpenFlights](https://openflights.org/data.html), loaded with [mariadb/openflights](https://github.com/mariadb/openflights).
+- Made by Ayoub Labrinssi. AI use is recorded in [AI-log.md](AI-log.md).
