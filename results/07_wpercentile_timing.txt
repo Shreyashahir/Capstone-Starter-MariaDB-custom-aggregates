@@ -1,0 +1,15 @@
+
+-- Machine: Windows laptop, AMD Ryzen 5 5500U (6 cores, 12 threads), 8 GB RAM, Docker Desktop (WSL 2), MariaDB 12.3.3. 10 runs each.
++----------+--------------------------+------+-----------+--------+--------+
+| workload | method                   | runs | median_ms | min_ms | max_ms |
++----------+--------------------------+------+-----------+--------+--------+
+| small    | wpercentile              |   10 |     236.0 |  204.3 |  348.2 |
+| small    | window functions by hand |   10 |     191.7 |  180.7 |  243.7 |
+| large    | wpercentile              |   10 |    1745.1 | 1680.4 | 2242.8 |
+| large    | window functions by hand |   10 |     824.9 |  674.6 | 1068.5 |
++----------+--------------------------+------+-----------+--------+--------+
++------------------+
+| large_mismatches |
++------------------+
+|                0 |
++------------------+
