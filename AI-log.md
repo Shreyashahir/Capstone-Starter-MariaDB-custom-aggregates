@@ -35,6 +35,7 @@ When the code changes, this log is updated so it still matches. New entries go a
 | 8 | 11 Oct | A cleaner AI log in one file | This file, with my decisions in their own column | Checked that every line is true |
 | 9 | 11 Oct | Clean, easy-to-read code, and a repo that follows opensource.guide | Shorter functions and comments, clearer `test.sh` output, tidier experiment headers, code of conduct, issue and PR templates, fuller CONTRIBUTING | Chose opensource.guide as the standard. Same results: 27 tests and 3 checks pass, same speed. Branch `refactor/clean-code` |
 | 10 | 11 Oct | A more professional README that is easy to follow and shows the new code | New README layout: badges, contents, quick start, "How it works" with the current `median_agg` and a flow diagram, tests section, project tree, contributing and credits | Asked for it to be open source friendly. All numbers and findings unchanged. Branch `refactor/clean-code` |
+| 11 | 12-14 Oct | A new aggregate I could add to this repo as my part of the project | `wpercentile` (weighted percentile), before/after/check queries, 14 tests, timing experiment 7, README text, and step-by-step instructions to add each file by hand | Chose the weighted percentile because the README's Contributing section asks for "a percentile or a weighted average". Added every file myself in VS Code. Ran `test.sh` on my laptop (MariaDB 12.3.3): 41 tests and 4 checks pass. Checked the US result myself (3 vs 196). Ran the timing on my own machine and used my numbers in the README. Branch `feat/wpercentile` |
 
 ## Prompts
 
@@ -172,6 +173,30 @@ Output:
 Output:
 - `README.md`: badges, a contents list, "The functions" table with links to the source, "Quick start", "How it works" (flow diagram and the current `median_agg` code), a "Tests" section with sample `test.sh` output, a short before/after example for `mode_agg`, a project tree, "Contributing" and "License and credits". Findings, charts and timings are the same numbers as before.
 - `CONTRIBUTING.md`: the setup link now points to "Quick start".
+
+### 11. wpercentile (by Shreyash Hadiya)
+
+- Date: 2026-10-12, 23:00 to 2026-10-14 (Germany)
+- Input: this repository, mariadb.org/bachelor_hackathon_2026-09
+
+> I am working with my friend, so I have to add my own work. What do I have to add in his repo?
+>
+> Can you help me add this in VS Code manually, step by step, so I know what I am adding?
+
+Output:
+- `sql/05_wpercentile.sql`: `wpercentile(x, w, p)` with `CREATE AGGREGATE FUNCTION`. Collects `[value, weight]` pairs, then returns the first value where the running total of weights reaches `p` times the sum.
+- `queries/wpercentile_before.sql`, `queries/wpercentile_after.sql`, `queries/wpercentile_check.sql` (checked at p = 0.1, 0.5 and 0.9).
+- `tests/tests.sql`: 14 tests (weights of 1, a heavy row, p = 0 and 1, zero, negative and NULL weights, p out of range, empty group, 1,999 random rows against `MEDIAN()`, the US result).
+- `experiments/07_wpercentile_timing.sql`: 10-run timing against the window-function query.
+- `test.sh`, `install.sh`: the new check and function added.
+- README: function row, "How it works" line, finding, before/after row, test counts, speed bullet, credits.
+- Help setting up Docker Desktop on Windows, including a line-ending problem (`\r`) that stopped the openflights loading script. Fixed by cloning openflights with `core.autocrlf=false`.
+
+What I did and checked myself:
+- Typed or pasted each file into VS Code and committed in steps on my own branch.
+- `./test.sh`: all 41 tests and 4 checks pass on MariaDB 12.3.3 (Docker Desktop, Windows).
+- Ran `wpercentile_after.sql`: the median US airport has 3 routes, but half of US routes leave from airports with 196 routes or more.
+- Ran experiment 7 on my laptop (Ryzen 5 5500U, 8 GB RAM): 236 ms vs 192 ms on small groups, 1.7 s vs 0.82 s on large groups, 0 mismatches. Saved in `results/07_wpercentile_timing.txt`.
 
 ## Adding a new entry
 
