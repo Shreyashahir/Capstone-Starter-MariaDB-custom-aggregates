@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs the edge-case tests and the 3 check queries. Run ./install.sh first.
+# Runs the edge-case tests and the 4 check queries. Run ./install.sh first.
 # Prints one line per test. A failing test shows what it got and expected.
 # Exits with 1 if anything fails.
 DBPW="${DBPW:-flightpw}"
@@ -12,7 +12,7 @@ echo "$results" | awk -F'\t' '{ if ($NF == 1) print "ok    " $1; else print "FAI
 failed=$(echo "$results" | awk -F'\t' '$NF != 1 { n++ } END { print n + 0 }')
 
 # 2. Whole-data checks: each query lists the countries where the two versions differ.
-for check in queries/median_check.sql queries/gini_check.sql queries/mode_check.sql; do
+for check in queries/median_check.sql queries/gini_check.sql queries/mode_check.sql queries/wpercentile_check.sql; do
   diff=$(db < "$check") || exit 1
   if [ -z "$diff" ]; then
     echo "ok    $check"
