@@ -358,6 +358,7 @@ Use one when there is no built-in (like Gini), when the formula is easy to get w
 ├── install.sh      installs the view and the functions
 ├── test.sh         runs the tests and the checks
 ├── AI-log.md       every AI use and its prompt
+├── SELF-ASSESSMENT.md what each of us did, week by week
 ├── CONTRIBUTING.md how to report a bug, suggest a feature or add a function
 └── CODE_OF_CONDUCT.md
 ```
