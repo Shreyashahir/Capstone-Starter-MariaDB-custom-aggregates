@@ -36,6 +36,7 @@ When the code changes, this log is updated so it still matches. New entries go a
 | 9 | 11 Oct | Clean, easy-to-read code, and a repo that follows opensource.guide | Shorter functions and comments, clearer `test.sh` output, tidier experiment headers, code of conduct, issue and PR templates, fuller CONTRIBUTING | Chose opensource.guide as the standard. Same results: 27 tests and 3 checks pass, same speed. Branch `refactor/clean-code` |
 | 10 | 11 Oct | A more professional README that is easy to follow and shows the new code | New README layout: badges, contents, quick start, "How it works" with the current `median_agg` and a flow diagram, tests section, project tree, contributing and credits | Asked for it to be open source friendly. All numbers and findings unchanged. Branch `refactor/clean-code` |
 | 11 | 12-14 Oct | A new aggregate I could add to this repo as my part of the project | `wpercentile` (weighted percentile), before/after/check queries, 14 tests, timing experiment 7, README text, and step-by-step instructions to add each file by hand | Chose the weighted percentile because the README's Contributing section asks for "a percentile or a weighted average". Added every file myself in VS Code. Ran `test.sh` on my laptop (MariaDB 12.3.3): 41 tests and 4 checks pass. Checked the US result myself (3 vs 196). Ran the timing on my own machine and used my numbers in the README. Branch `feat/wpercentile` |
+| 12 | 15 Oct | Check my teammate's PR, prepare the meeting and write the weekly self-assessment | Notes on PR #4, a draft email to the supervisor and an updated meeting talk (both outside the repo), and a draft of `SELF-ASSESSMENT.md` | Merged PR #4 myself. Gave my hours, my real plan and the notes, and corrected the draft. Branch `docs/self-assessment` |
 
 ## Prompts
 
@@ -197,6 +198,28 @@ What I did and checked myself:
 - `./test.sh`: all 41 tests and 4 checks pass on MariaDB 12.3.3 (Docker Desktop, Windows).
 - Ran `wpercentile_after.sql`: the median US airport has 3 routes, but half of US routes leave from airports with 196 routes or more.
 - Ran experiment 7 on my laptop (Ryzen 5 5500U, 8 GB RAM): 236 ms vs 192 ms on small groups, 1.7 s vs 0.82 s on large groups, 0 mismatches. Saved in `results/07_wpercentile_timing.txt`.
+
+### 12. Teammate's PR, meeting and self-assessment
+
+- Date: 2026-10-15 (Morocco)
+- Input: this repository, `Team Guide.pdf` (the self-assessment fields)
+
+> Go to the capstone project. My teammate said he did something. See if he created a PR, and should I prepare emails to the teacher or just wait for the meeting and present the work?
+>
+> What should I present to the teacher at the meeting?
+>
+> Let's write the weekly self-assessment.
+
+Output:
+- A summary of PR #4: what it adds, that it merges cleanly, and two small README fixes for later. The AI read the code but did not run the tests.
+- A draft email to the supervisor (outside the repo).
+- The meeting talk updated with `wpercentile`, Shreyash's part and a list of GitHub issues to open (outside the repo).
+- `SELF-ASSESSMENT.md`: the fields from the Team Guide, filled from the git history for the weeks of 5 and 12 October.
+
+What I did and checked myself:
+- Merged PR #4 on GitHub.
+- Gave my hours, my plan for next week and the notes, and corrected the draft where it was wrong.
+- Chose to keep the self-assessment in the repo, next to this log.
 
 ## Adding a new entry
 
